@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deriv Accumulators Auto Trader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .status-connected {
+        color: #10b981;
+      }
+      .status-disconnected {
+        color: #ef4444;
+      }
+      .profit {
+        color: #10b981;
+      }
+      .loss {
+        color: #ef4444;
+      }
+      .volatility-low {
+        color: #10b981;
+      }
+      .volatility-medium {
+        color: #f59e0b;
+      }
+      .volatility-high {
+        color: #ef4444;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-gray-100 min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h1 class="text-3xl font-bold mb-4 text-purple-400">
+          📊 Deriv Accumulators Auto Trader
+        </h1>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-sm text-gray-400">Connection</p>
+            <p
+              id="connectionStatus"
+              class="text-xl font-bold status-disconnected"
+            >
+              Disconnected
+            </p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-sm text-gray-400">Balance</p>
+            <p id="balance" class="text-xl font-bold">$0.00</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-sm text-gray-400">Session PnL</p>
+            <p id="totalPnl" class="text-xl font-bold">$0.00</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-sm text-gray-400">Win Rate</p>
+            <p id="winRate" class="text-xl font-bold">0%</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div class="bg-gray-700 p-3 rounded">
+            <p class="text-xs text-gray-400">Current Growth Rate</p>
+            <p
+              id="currentGrowthRate"
+              class="text-2xl font-bold text-purple-400"
+            >
+              1%
+            </p>
+          </div>
+          <div class="bg-gray-700 p-3 rounded">
+            <p class="text-xs text-gray-400">Tick Volatility</p>
+            <p id="tickVolatility" class="text-lg font-bold volatility-low">
+              LOW
+            </p>
+          </div>
+          <div class="bg-gray-700 p-3 rounded">
+            <p class="text-xs text-gray-400">Total Trades</p>
+            <p id="totalTrades" class="text-lg font-bold">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Connection -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">🔌 API Connection</h2>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="apiToken"
+            placeholder="Enter Deriv API Token"
+            class="flex-1 bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white"
+          />
+          <button
+            onclick="connectAPI()"
+            class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded font-semibold"
+          >
+            Connect
+          </button>
+          <button
+            onclick="disconnectAPI()"
+            class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-semibold"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <!-- Market & Trading Settings -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h2 class="text-xl font-bold mb-4">🎯 Trading Settings</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm mb-1">Volatility Market</label>
+              <select
+                id="market"
+                onchange="updateMarket()"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              >
+                <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                <option value="1HZ100V">Volatility 100 (1s) Index</option>
+                <option value="BOOM1000">BOOM 1000 Index</option>
+                <option value="CRASH1000">CRASH 1000  Index</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Initial Stake ($)</label>
+              <input
+                type="number"
+                id="initialStake"
+                min="1"
+                step="1"
+                value="10"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Take Profit Target ($)</label>
+              <input
+                type="number"
+                id="takeProfitTarget"
+                min="1"
+                step="1"
+                value="5"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              />
+              <p class="text-xs text-gray-400 mt-1">
+                Close trade when profit reaches this amount
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Max Ticks Per Trade</label>
+              <input
+                type="number"
+                id="maxTicks"
+                min="10"
+                max="1000"
+                value="100"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              />
+              <p class="text-xs text-gray-400 mt-1">Auto-close after N ticks</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Growth Rate Management -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h2 class="text-xl font-bold mb-4">📈 Growth Rate Strategy</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="enableAutoGrowth"
+                  checked
+                  class="w-4 h-4"
+                />
+                <span class="font-semibold"
+                  >Enable Auto Growth Rate Adjustment</span
+                >
+              </label>
+              <p class="text-xs text-gray-300 mb-3">
+                Bot analyzes tick movement and adjusts growth rate automatically
+              </p>
+            </div>
+
+            <div
+              class="bg-gradient-to-r from-green-900 to-blue-900 p-3 rounded"
+            >
+              <p class="text-xs font-semibold mb-2">📊 Growth Rate Rules:</p>
+              <ul class="text-xs space-y-1">
+                <li>
+                  🟢 <strong>LOW Volatility</strong> (tight ticks) → Higher
+                  growth (4-5%)
+                </li>
+                <li>
+                  🟡 <strong>MEDIUM Volatility</strong> (moderate) → Medium
+                  growth (2-3%)
+                </li>
+                <li>
+                  🔴 <strong>HIGH Volatility</strong> (wide swings) → Lower
+                  growth (1%)
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <label class="block text-sm mb-1"
+                >Manual Growth Rate Override</label
+              >
+              <select
+                id="manualGrowthRate"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              >
+                <option value="0.01">1% (Safest - High Volatility)</option>
+                <option value="0.02">2% (Conservative)</option>
+                <option value="0.03">3% (Balanced)</option>
+                <option value="0.04">4% (Aggressive)</option>
+                <option value="0.05">5% (Highest Risk - Low Volatility)</option>
+              </select>
+              <button
+                onclick="applyManualGrowthRate()"
+                class="mt-2 w-full bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded font-semibold text-sm"
+              >
+                Apply During Active Trade
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-sm mb-1"
+                >Volatility Analysis Window (ticks)</label
+              >
+              <input
+                type="number"
+                id="volatilityWindow"
+                min="5"
+                max="50"
+                value="20"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Volatility Analysis Display -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">🌊 Real-Time Tick Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-xs text-gray-400">Tick Movement</p>
+            <p id="tickMovement" class="text-lg font-bold">-</p>
+            <p class="text-xs text-gray-500 mt-1">Avg change per tick</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-xs text-gray-400">Tick Range</p>
+            <p id="tickRange" class="text-lg font-bold">-</p>
+            <p class="text-xs text-gray-500 mt-1">Max - Min in window</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-xs text-gray-400">Recommended Growth</p>
+            <p id="recommendedGrowth" class="text-lg font-bold text-purple-400">
+              -
+            </p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded">
+            <p class="text-xs text-gray-400">Ticks Analyzed</p>
+            <p id="ticksAnalyzed" class="text-lg font-bold">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Management -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">⚙️ Risk Management</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm mb-1">Max Loss Per Session ($)</label>
+            <input
+              type="number"
+              id="maxLoss"
+              min="1"
+              value="50"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+            />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Max Profit Target ($)</label>
+            <input
+              type="number"
+              id="maxProfit"
+              min="1"
+              value="100"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+            />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Max Trades Per Session</label>
+            <input
+              type="number"
+              id="maxTrades"
+              min="1"
+              value="20"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Trading Controls -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">🎮 Trading Controls</h2>
+        <div class="flex gap-3">
+          <button
+            onclick="startAccumulator()"
+            id="startBtn"
+            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded font-semibold flex-1"
+          >
+            🚀 Start Accumulator
+          </button>
+          <button
+            onclick="sellAccumulator()"
+            id="sellBtn"
+            class="bg-orange-600 hover:bg-orange-700 px-6 py-3 rounded font-semibold flex-1"
+            disabled
+          >
+            💰 Sell Now
+          </button>
+          <button
+            onclick="stopTrading()"
+            id="stopBtn"
+            class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded font-semibold flex-1"
+            disabled
+          >
+            ⛔ Stop Trading
+          </button>
+          <button
+            onclick="resetSession()"
+            class="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 rounded font-semibold"
+          >
+            🔄 Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Trade Monitor -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">📈 Active Trade Monitor</h2>
+        <div id="activeTradePanel" class="hidden">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-xs text-gray-400">Contract ID</p>
+              <p id="contractId" class="text-sm font-mono">-</p>
+            </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-xs text-gray-400">Current Profit</p>
+              <p id="currentProfit" class="text-xl font-bold profit">$0.00</p>
+            </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-xs text-gray-400">Ticks Elapsed</p>
+              <p id="ticksElapsed" class="text-xl font-bold">0</p>
+            </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-xs text-gray-400">Growth Rate</p>
+              <p
+                id="activeGrowthRate"
+                class="text-xl font-bold text-purple-400"
+              >
+                1%
+              </p>
+            </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-xs text-gray-400">Status</p>
+              <p id="tradeStatus" class="text-sm font-bold text-green-400">
+                OPEN
+              </p>
+            </div>
+          </div>
+          <div class="bg-gray-700 p-3 rounded">
+            <p class="text-xs text-gray-400 mb-2">Progress to Target:</p>
+            <div class="w-full bg-gray-600 rounded-full h-4">
+              <div
+                id="profitProgress"
+                class="bg-green-600 h-4 rounded-full transition-all"
+                style="width: 0%"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1 text-center" id="progressText">
+              $0.00 / $5.00
+            </p>
+          </div>
+        </div>
+        <div id="noTradePanel" class="text-center text-gray-500 py-8">
+          No active trade. Click "Start Accumulator" to begin.
+        </div>
+      </div>
+
+      <!-- Trade History -->
+      <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+        <h2 class="text-xl font-bold mb-4">📜 Trade History</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-700">
+              <tr>
+                <th class="p-2 text-left">Time</th>
+                <th class="p-2 text-left">Market</th>
+                <th class="p-2 text-left">Growth Rate</th>
+                <th class="p-2 text-left">Ticks</th>
+                <th class="p-2 text-left">Stake</th>
+                <th class="p-2 text-left">Payout</th>
+                <th class="p-2 text-left">Result</th>
+                <th class="p-2 text-left">PnL</th>
+              </tr>
+            </thead>
+            <tbody id="tradeHistory" class="divide-y divide-gray-700">
+              <tr>
+                <td colspan="8" class="p-4 text-center text-gray-500">
+                  No trades yet
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global State
+      let ws = null;
+      let isConnected = false;
+      let isTrading = false;
+      let balance = 0;
+      let totalPnl = 0;
+      let totalTrades = 0;
+      let wins = 0;
+      let losses = 0;
+      let tradeHistory = [];
+      let tickData = [];
+      let currentContractId = null;
+      let currentProfit = 0;
+      let currentTicks = 0;
+      let currentGrowthRate = 0.01;
+
+      // Connect to Deriv API
+      function connectAPI() {
+        const token = document.getElementById("apiToken").value;
+        if (!token) {
+          alert("Please enter your API token");
+          return;
+        }
+
+        ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+
+        ws.onopen = () => {
+          ws.send(
+            JSON.stringify({
+              authorize: token,
+            })
+          );
+        };
+
+        ws.onmessage = (msg) => {
+          const data = JSON.parse(msg.data);
+          handleWSMessage(data);
+        };
+
+        ws.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          updateConnectionStatus(false);
+        };
+
+        ws.onclose = () => {
+          updateConnectionStatus(false);
+        };
+      }
+
+      function disconnectAPI() {
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+        stopTrading();
+        updateConnectionStatus(false);
+      }
+
+      function handleWSMessage(data) {
+        if (data.msg_type === "authorize") {
+          if (data.authorize) {
+            isConnected = true;
+            balance = data.authorize.balance;
+            updateConnectionStatus(true);
+            updateBalance();
+            subscribeToTicks();
+          } else {
+            alert("Authorization failed. Check your API token.");
+            disconnectAPI();
+          }
+        } else if (data.msg_type === "tick") {
+          handleTick(data.tick);
+        } else if (data.msg_type === "buy") {
+          handleBuyResponse(data);
+        } else if (data.msg_type === "proposal_open_contract") {
+          handleContractUpdate(data);
+        } else if (data.msg_type === "balance") {
+          balance = data.balance.balance;
+          updateBalance();
+        }
+      }
+
+      function subscribeToTicks() {
+        const market = document.getElementById("market").value;
+        ws.send(
+          JSON.stringify({
+            ticks: market,
+            subscribe: 1,
+          })
+        );
+      }
+
+      function updateMarket() {
+        if (isConnected) {
+          subscribeToTicks();
+          tickData = [];
+        }
+      }
+
+      function handleTick(tick) {
+        tickData.push(parseFloat(tick.quote));
+        const windowSize = parseInt(
+          document.getElementById("volatilityWindow").value
+        );
+        if (tickData.length > windowSize) {
+          tickData.shift();
+        }
+
+        analyzeVolatility();
+        document.getElementById("ticksAnalyzed").textContent = tickData.length;
+      }
+
+      function analyzeVolatility() {
+        if (tickData.length < 5) return;
+
+        // Calculate average tick movement
+        let totalMovement = 0;
+        for (let i = 1; i < tickData.length; i++) {
+          totalMovement += Math.abs(tickData[i] - tickData[i - 1]);
+        }
+        const avgMovement = totalMovement / (tickData.length - 1);
+
+        // Calculate range
+        const max = Math.max(...tickData);
+        const min = Math.min(...tickData);
+        const range = max - min;
+
+        // Classify volatility
+        let volatilityLevel = "LOW";
+        let recommendedGrowth = 0.05;
+        let className = "volatility-low";
+
+        if (avgMovement > 0.02 || range > 0.5) {
+          volatilityLevel = "HIGH";
+          recommendedGrowth = 0.01;
+          className = "volatility-high";
+        } else if (avgMovement > 0.01 || range > 0.2) {
+          volatilityLevel = "MEDIUM";
+          recommendedGrowth = 0.03;
+          className = "volatility-medium";
+        }
+
+        // Update displays
+        document.getElementById("tickMovement").textContent =
+          avgMovement.toFixed(4);
+        document.getElementById("tickRange").textContent = range.toFixed(4);
+        document.getElementById("recommendedGrowth").textContent = `${(
+          recommendedGrowth * 100
+        ).toFixed(0)}%`;
+
+        const volEl = document.getElementById("tickVolatility");
+        volEl.textContent = volatilityLevel;
+        volEl.className = `text-lg font-bold ${className}`;
+
+        // Auto-adjust growth rate if enabled
+        if (
+          document.getElementById("enableAutoGrowth").checked &&
+          !currentContractId
+        ) {
+          currentGrowthRate = recommendedGrowth;
+          document.getElementById("currentGrowthRate").textContent = `${(
+            currentGrowthRate * 100
+          ).toFixed(0)}%`;
+        }
+      }
+
+      function applyManualGrowthRate() {
+        const manualRate = parseFloat(
+          document.getElementById("manualGrowthRate").value
+        );
+        currentGrowthRate = manualRate;
+        document.getElementById("currentGrowthRate").textContent = `${(
+          currentGrowthRate * 100
+        ).toFixed(0)}%`;
+
+        // If there's an active trade, update it
+        if (currentContractId) {
+          alert(
+            `Growth rate will be ${(currentGrowthRate * 100).toFixed(
+              0
+            )}% for next trade. Current trade continues with original rate.`
+          );
+        } else {
+          alert(`Growth rate set to ${(currentGrowthRate * 100).toFixed(0)}%`);
+        }
+      }
+
+      function updateConnectionStatus(connected) {
+        isConnected = connected;
+        const statusEl = document.getElementById("connectionStatus");
+        statusEl.textContent = connected ? "Connected" : "Disconnected";
+        statusEl.className = connected
+          ? "text-xl font-bold status-connected"
+          : "text-xl font-bold status-disconnected";
+      }
+
+      function updateBalance() {
+        document.getElementById("balance").textContent = `$${balance.toFixed(
+          2
+        )}`;
+      }
+
+      function updatePnL() {
+        const pnlEl = document.getElementById("totalPnl");
+        pnlEl.textContent = `$${totalPnl.toFixed(2)}`;
+        pnlEl.className = `text-xl font-bold ${
+          totalPnl >= 0 ? "profit" : "loss"
+        }`;
+      }
+
+      function updateWinRate() {
+        const rate =
+          totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
+        document.getElementById("winRate").textContent = `${rate}%`;
+        document.getElementById("totalTrades").textContent = totalTrades;
+      }
+
+      // Start Accumulator Trade
+      async function startAccumulator() {
+        if (!isConnected) {
+          alert("Please connect to API first");
+          return;
+        }
+
+        if (tickData.length < 5) {
+          alert("Collecting tick data... Please wait.");
+          return;
+        }
+
+        const market = document.getElementById("market").value;
+        const stake = parseFloat(document.getElementById("initialStake").value);
+
+        // Buy accumulator contract
+        const buyReq = {
+          buy: 1,
+          price: stake,
+          parameters: {
+            amount: stake,
+            basis: "stake",
+            contract_type: "ACCU",
+            currency: "USD",
+            growth_rate: currentGrowthRate,
+            symbol: market,
+          },
+        };
+
+        ws.send(JSON.stringify(buyReq));
+
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("sellBtn").disabled = false;
+        document.getElementById("stopBtn").disabled = false;
+        isTrading = true;
+      }
+
+      function handleBuyResponse(data) {
+    if (data.error) {
+        console.error('Buy error:', data.error);
+        alert('Trade failed: ' + data.error.message);
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('sellBtn').disabled = true;
+        return;
+    }
+
+    currentContractId = data.buy.contract_id;
+    currentTicks = 0;
+    currentProfit = 0;
+
+    // Convert to string before using substring
+    document.getElementById('contractId').textContent = String(currentContractId).substring(0, 16) + '...';
+    document.getElementById('activeGrowthRate').textContent = `${(currentGrowthRate * 100).toFixed(0)}%`;
+    
+    document.getElementById('activeTradePanel').classList.remove('hidden');
+    document.getElementById('noTradePanel').classList.add('hidden');
+
+    // Subscribe to contract updates
+    ws.send(JSON.stringify({
+        proposal_open_contract: 1,
+        contract_id: currentContractId,
+        subscribe: 1
+    }));
+}
+
+      function handleContractUpdate(data) {
+        const contract = data.proposal_open_contract;
+
+        if (!contract) return;
+
+        currentProfit = contract.profit || 0;
+        currentTicks = contract.tick_count || 0;
+
+        document.getElementById(
+          "currentProfit"
+        ).textContent = `$${currentProfit.toFixed(2)}`;
+        document.getElementById(
+          "currentProfit"
+        ).className = `text-xl font-bold ${
+          currentProfit >= 0 ? "profit" : "loss"
+        }`;
+        document.getElementById("ticksElapsed").textContent = currentTicks;
+
+        // Update progress bar
+        const targetProfit = parseFloat(
+          document.getElementById("takeProfitTarget").value
+        );
+        const progress = Math.min((currentProfit / targetProfit) * 100, 100);
+        document.getElementById("profitProgress").style.width = `${progress}%`;
+        document.getElementById(
+          "progressText"
+        ).textContent = `$${currentProfit.toFixed(2)} / $${targetProfit.toFixed(
+          2
+        )}`;
+
+        // Auto-sell conditions
+        const maxTicks = parseInt(document.getElementById("maxTicks").value);
+
+        if (currentProfit >= targetProfit) {
+          sellAccumulator();
+          return;
+        }
+
+        if (currentTicks >= maxTicks) {
+          sellAccumulator();
+          return;
+        }
+
+        // Check if contract is closed
+        if (contract.status === "sold" || contract.is_sold) {
+          handleTradeComplete(contract);
+        }
+      }
+
+      function sellAccumulator() {
+        if (!currentContractId) return;
+
+        ws.send(
+          JSON.stringify({
+            sell: currentContractId,
+            price: 0,
+          })
+        );
+
+        document.getElementById("sellBtn").disabled = true;
+      }
+
+      function handleTradeComplete(contract) {
+        const profit = contract.sell_price - contract.buy_price;
+        totalPnl += profit;
+        totalTrades++;
+
+        if (profit > 0) {
+          wins++;
+        } else {
+          losses++;
+        }
+
+        updatePnL();
+        updateWinRate();
+
+        addTradeToHistory({
+          time: new Date().toLocaleTimeString(),
+          market: contract.underlying,
+          growthRate: `${(currentGrowthRate * 100).toFixed(0)}%`,
+          ticks: currentTicks,
+          stake: contract.buy_price,
+          payout: contract.sell_price,
+          result: profit > 0 ? "Win" : "Loss",
+          pnl: profit,
+        });
+
+        // Reset for next trade
+        currentContractId = null;
+        currentTicks = 0;
+        currentProfit = 0;
+
+        document.getElementById("activeTradePanel").classList.add("hidden");
+        document.getElementById("noTradePanel").classList.remove("hidden");
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("sellBtn").disabled = true;
+
+        // Check limits
+        const maxLoss = parseFloat(document.getElementById("maxLoss").value);
+        const maxProfit = parseFloat(
+          document.getElementById("maxProfit").value
+        );
+        const maxTrades = parseInt(document.getElementById("maxTrades").value);
+
+        if (Math.abs(totalPnl) >= maxLoss && totalPnl < 0) {
+          stopTrading();
+          alert("Max loss reached!");
+          return;
+        }
+
+        if (totalPnl >= maxProfit) {
+          stopTrading();
+          alert("Profit target reached!");
+          return;
+        }
+
+        if (totalTrades >= maxTrades) {
+          stopTrading();
+          alert("Max trades reached!");
+          return;
+        }
+
+        // Auto-start next trade if still trading
+        if (isTrading) {
+          setTimeout(() => startAccumulator(), 2000);
+        }
+      }
+
+      function stopTrading() {
+        isTrading = false;
+        if (currentContractId) {
+          sellAccumulator();
+        }
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("sellBtn").disabled = true;
+        document.getElementById("stopBtn").disabled = true;
+      }
+
+      function addTradeToHistory(trade) {
+        tradeHistory.unshift(trade);
+        if (tradeHistory.length > 50) tradeHistory.pop();
+        const tbody = document.getElementById("tradeHistory");
+        tbody.innerHTML = tradeHistory
+          .map(
+            (t) => `
+            <tr class="hover:bg-gray-700">
+                <td class="p-2">${t.time}</td>
+                <td class="p-2">${t.market}</td>
+                <td class="p-2 font-bold text-purple-400">${t.growthRate}</td>
+                <td class="p-2">${t.ticks}</td>
+                <td class="p-2">$${t.stake.toFixed(2)}</td>
+                <td class="p-2">$${t.payout.toFixed(2)}</td>
+                <td class="p-2"><span class="px-2 py-1 rounded ${
+                  t.result === "Win" ? "bg-green-600" : "bg-red-600"
+                }">${t.result}</span></td>
+                <td class="p-2 font-bold ${
+                  t.pnl >= 0 ? "profit" : "loss"
+                }">$${t.pnl.toFixed(2)}</td>
+            </tr>
+        `
+          )
+          .join("");
+      }
+
+      function resetSession() {
+        if (confirm("Reset session data?")) {
+          totalPnl = 0;
+          totalTrades = 0;
+          wins = 0;
+          losses = 0;
+          tradeHistory = [];
+
+          document.getElementById("tradeHistory").innerHTML =
+            '<tr><td colspan="8" class="p-4 text-center text-gray-500">No trades yet</td></tr>';
+
+          updatePnL();
+          updateWinRate();
+        }
+      }
+    </script>
+  </body>
+</html>

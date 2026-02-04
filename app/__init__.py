@@ -1,0 +1,1 @@
+"""Trading intelligence application package."""

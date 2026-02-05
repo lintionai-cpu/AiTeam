@@ -1,0 +1,30 @@
+export const state = {
+  connectionStatus: 'Disconnected',
+  account: null,
+  activeTrades: [],
+  tradeHistory: [],
+  signalLog: [],
+  settings: {
+    focusMarket: 'R_100',
+    focusTimeframe: '3m',
+    stake: 1,
+    runCount: 100,
+    executedTrades: 0,
+    maxWin: 20,
+    minWin: 1,
+    maxLoss: 10,
+    duration: 1,
+    durationUnit: 'm',
+  },
+  risk: {
+    enabled: true,
+    maxDrawdownPct: 10,
+    maxConsecutiveLosses: 4,
+    equityFloor: 0,
+  },
+  martingale: {
+    enabled: false,
+    multiplier: 2,
+    maxSteps: 3,
+  },
+};

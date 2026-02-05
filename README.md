@@ -8,6 +8,7 @@ Production-oriented browser app (HTML/CSS/JS) with:
 - Modular strategy engine with on/off toggles for 7 required strategies.
 - Focus market execution model (analyze all, execute only selected focus market).
 - Trade execution with debounce and retry-safe handling.
+- Execution contract focus on Rise/Fall and Rise/Fall Equals modes.
 - Risk manager + smart martingale with reset semantics preserving market streams.
 
 ## Structure

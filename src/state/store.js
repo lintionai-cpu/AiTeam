@@ -15,6 +15,7 @@ export const state = {
     maxLoss: 10,
     duration: 1,
     durationUnit: 'm',
+    contractMode: 'rise_fall',
   },
   risk: {
     enabled: true,

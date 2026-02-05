@@ -74,6 +74,7 @@ function bindControlInputs() {
     state.settings[key] = Number(e.target.value);
   }));
   $('duration-unit').addEventListener('change', (e) => { state.settings.durationUnit = e.target.value; });
+  $('contract-mode').addEventListener('change', (e) => { state.settings.contractMode = e.target.value; });
   $('focus-timeframe').addEventListener('change', (e) => { state.settings.focusTimeframe = e.target.value; });
 
   $('risk-enabled').addEventListener('change', (e) => risk.updateSettings({ enabled: e.target.checked }));

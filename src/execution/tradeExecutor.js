@@ -19,13 +19,19 @@ export class TradeExecutor {
     this.lastSignalTs = Date.now();
 
     const stake = this.martingale.nextStake(settings.stake);
+    const contractTypeByMode = {
+      rise_fall: { BUY: 'CALL', SELL: 'PUT' },
+      rise_fall_equals: { BUY: 'CALLE', SELL: 'PUTE' },
+    };
+    const contractType = contractTypeByMode[settings.contractMode]?.[signal.side] || (signal.side === 'BUY' ? 'CALL' : 'PUT');
+
     const payload = {
       buy: 1,
       price: stake,
       parameters: {
         amount: stake,
         basis: 'stake',
-        contract_type: signal.side === 'BUY' ? 'CALL' : 'PUT',
+        contract_type: contractType,
         currency: 'USD',
         duration: Number(settings.duration),
         duration_unit: settings.durationUnit,

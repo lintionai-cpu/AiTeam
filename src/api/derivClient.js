@@ -5,7 +5,7 @@ import { log } from '../utils/logger.js';
 const DERIV_WS = 'wss://ws.derivws.com/websockets/v3';
 
 export class DerivClient {
-  constructor({ appId, token, mode = 'mock' }) {
+  constructor({ appId, token, mode = 'live' }) {
     this.appId = appId;
     this.token = token;
     this.mode = mode;
@@ -20,7 +20,7 @@ export class DerivClient {
   }
 
   connect() {
-    if (this.mode === 'mock') return this.startMockFeed();
+    if (this.mode === 'live') return this.startMockFeed();
     this.ws = new WebSocket(`${DERIV_WS}?app_id=${this.appId}`);
     this.ws.onopen = () => this.onOpen();
     this.ws.onmessage = (e) => this.onMessage(e);
@@ -69,7 +69,7 @@ export class DerivClient {
   }
 
   send(payload) {
-    if (this.mode === 'mock') return;
+    if (this.mode === 'live') return;
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(payload));
   }
 

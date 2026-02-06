@@ -11,9 +11,9 @@ export const DEFAULT_SYMBOLS = [
 export const TIMEFRAMES = [60, 180, 300];
 
 export const defaultSettings = {
-  mode: 'mock',
-  appId: '1089',
-  token: '',
+  mode: 'live',
+  appId: '109827',
+  token: 'r6WroAqtnKfHg7H',
   focusSymbol: 'R_50',
   focusTimeframe: 60,
   stake: 1,
